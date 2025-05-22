@@ -1,0 +1,15 @@
+{
+  "name": "Gestensensor v1.0 - SeeedStudio (Grove)",
+  "version": "1.0",
+  "description": "Gestensensor v1.0 von SeeedStudio (Grove) - MGPossible",
+  "dependencies": {},
+  "files": [
+    "main.ts"
+  ],
+  "targetVersions": {
+    "branch": "v1.0.0",
+    "tag": "v1.0.0",
+    "target": "calliopemini"
+  },
+  "preferredEditor": "tsprj"
+}
