@@ -5,74 +5,122 @@
  */
 //% color=#8f3fd1 icon="\uf20e" block="Gestensensor by MG"
 //% groups=['Grundfunktionen', 'Erweiterungen']
-namespace gesten {
+namespace gestureSensor {
 
-    let letzteGeste = GroveGesture.None;
+    let lastGesture = 0;
+    let gestureChanged = false;
 
-    /**
-     * Initialisiert den Gestensensor (PAJ7620U2).
-     */
+    const GES_ADDR = 0x73;
+    const GES_REG = 0x43;
+
+    //% block="initialisiere Gestensensor"
     //% group="Grundfunktionen"
-    //% block="Gestensensor initialisieren"
-    //% block.tooltip="Initialisiert den Gestensensor für die Erkennung von Bewegungen."
-    export function initialisieren(): void {
-        grove.initGesture()
+    //% block.tooltip="Initialisiert den PAJ7620U2 Gestensensor für die Verwendung."
+    export function init(): void {
+        pins.i2cWriteNumber(GES_ADDR, 0xEF01, NumberFormat.UInt16BE);
+        basic.pause(10);
+        // (vereinfachte Initialisierung für PAJ7620U2)
     }
 
-    /**
-     * Gibt die zuletzt erkannte Geste zurück.
-     */
+    //% block="erkannte Geste (als Zahl)"
     //% group="Grundfunktionen"
-    //% block="zuletzt erkannte Geste"
-    //% block.tooltip="Gibt die zuletzt erkannte Geste als Wert zurück."
+    //% block.tooltip="Liest die aktuell erkannte Geste als Zahl."
     export function erkannteGeste(): number {
-        letzteGeste = grove.getGestureModel()
-        return letzteGeste
-    }
-
-    /**
-     * Führt einen Codeblock aus, wenn eine bestimmte Geste erkannt wird.
-     * @param g die zu erkennende Geste
-     * @param handler der auszuführende Code
-     */
-    //% group="Grundfunktionen"
-    //% block="wenn Geste %g erkannt"
-    //% block.tooltip="Führt den angegebenen Code aus, wenn die ausgewählte Geste erkannt wird."
-    export function wennGeste(g: GroveGesture, handler: () => void): void {
-        grove.onGesture(g, handler);
-    }
-
-    /**
-     * Zeigt die erkannte Geste auf dem Display an.
-     */
-    //% group="Erweiterungen"
-    //% block="zeige erkannte Geste auf Display"
-    //% block.tooltip="Zeigt eine Textbeschreibung der erkannten Geste auf dem Display."
-    export function zeigeGeste(): void {
-        let g = erkannteGeste();
-        let name = ""
-        switch (g) {
-            case GroveGesture.Up: name = "Oben"; break;
-            case GroveGesture.Down: name = "Unten"; break;
-            case GroveGesture.Left: name = "Links"; break;
-            case GroveGesture.Right: name = "Rechts"; break;
-            case GroveGesture.Forward: name = "Vor"; break;
-            case GroveGesture.Backward: name = "Zurück"; break;
-            case GroveGesture.Clockwise: name = "Im Uhrzeiger"; break;
-            case GroveGesture.Anticlockwise: name = "Gegen Uhr"; break;
-            case GroveGesture.Wave: name = "Winken"; break;
-            default: name = "Keine"; break;
+        let g = pins.i2cReadNumber(GES_ADDR, NumberFormat.UInt8LE);
+        if (g != lastGesture) {
+            gestureChanged = true;
+            lastGesture = g;
+        } else {
+            gestureChanged = false;
         }
-        basic.showString(name);
+        return g;
+    }
+
+    //% block="wenn Geste %g erkannt wurde"
+    //% group="Grundfunktionen"
+    //% blockTooltip="Führt den Code aus, wenn eine bestimmte Geste erkannt wird."
+    export function onGesture(g: GestureType, handler: () => void): void {
+        control.inBackground(() => {
+            while (true) {
+                if (erkannteGeste() == g) {
+                    handler();
+                }
+                basic.pause(100);
+            }
+        });
+    }
+
+    //% block="Name der letzten Geste"
+    //% group="Erweiterungen"
+    //% block.tooltip="Gibt den Namen der zuletzt erkannten Geste als Text zurück."
+    export function nameDerGeste(): string {
+        switch (lastGesture) {
+            case 0x01: return "rechts";
+            case 0x02: return "links";
+            case 0x04: return "hoch";
+            case 0x08: return "runter";
+            case 0x10: return "nach vorne";
+            case 0x20: return "nach hinten";
+            case 0x40: return "Uhrzeigersinn";
+            case 0x80: return "gegen den Uhrzeigersinn";
+            case 0x00: return "Keine";
+            default: return "Unbekannt";
+        }
+    }
+
+    //% block="Geste erkennen innerhalb von %timeout ms"
+    //% group="Erweiterungen"
+    //% block.tooltip="Wartet für eine bestimmte Zeit auf eine Geste und gibt deren Nummer zurück."
+    export function warteAufGeste(timeout: number): number {
+        let start = control.millis();
+        let g = 0;
+        while (control.millis() - start < timeout) {
+            g = erkannteGeste();
+            if (g != 0) break;
+            basic.pause(50);
+        }
+        return g;
+    }
+
+    //% block="neue Geste erkannt?"
+    //% group="Erweiterungen"
+    //% block.tooltip="Gibt 'true' zurück, wenn sich die Geste seit der letzten Messung geändert hat."
+    export function neueGesteErkannt(): boolean {
+        erkannteGeste();
+        return gestureChanged;
+    }
+
+    //% block="Pause bis eine beliebige Geste erkannt wurde"
+    //% group="Erweiterungen"
+    //% block.tooltip="Hält das Programm an, bis eine Geste erkannt wurde."
+    export function warteAufBeliebigeGeste(): void {
+        while (erkannteGeste() == 0) {
+            basic.pause(50);
+        }
     }
 
     /**
-     * Gibt true zurück, wenn die letzte Geste gleich der angegebenen ist.
+     * Mögliche Gesten
      */
-    //% group="Erweiterungen"
-    //% block="letzte Geste war %g"
-    //% block.tooltip="Prüft, ob die zuletzt erkannte Geste der angegebenen entspricht."
-    export function istGeste(g: GroveGesture): boolean {
-        return erkannteGeste() == g;
+    //% blockId=gesture_enum block="Geste"
+    export enum GestureType {
+        //% block="keine"
+        None = 0,
+        //% block="rechts"
+        Right = 0x01,
+        //% block="links"
+        Left = 0x02,
+        //% block="hoch"
+        Up = 0x04,
+        //% block="runter"
+        Down = 0x08,
+        //% block="vorwärts"
+        Forward = 0x10,
+        //% block="rückwärts"
+        Backward = 0x20,
+        //% block="im Uhrzeigersinn"
+        Clockwise = 0x40,
+        //% block="gegen den Uhrzeigersinn"
+        CounterClockwise = 0x80
     }
-}  
+}
