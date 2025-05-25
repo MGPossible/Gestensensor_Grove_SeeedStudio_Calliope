@@ -1,5 +1,3 @@
-// main.ts
-
 /**
  * Grove Gesture Sensor Erweiterung (PAJ7620U2)
  */
@@ -7,21 +5,24 @@
 //% groups=['Grundfunktionen', 'Erweiterungen']
 namespace gestureSensor {
 
-    let lastGesture = 0;
-    let gestureChanged = false;
+    let lastGesture = 0
+    let gestureChanged = false
 
-    const GES_ADDR = 0x73;
-    const GES_REG = 0x43;
+    const GES_ADDR = 0x73
+    const GES_REG = 0x43
+    const GES_REG2 = 0x44
 
-    // Registrierungsdaten laut PAJ7620U2-Datenblatt (verkürzt)
+    // Vollständige Initialisierungsdaten (gekürzt darstellbar, aber vollständig verwenden!)
     const INIT_REGISTERS: [number, number][] = [
-        [0xEF, 0x00],
-        [0x32, 0x29],
-        [0x33, 0x01],
-        [0x34, 0x00],
-        [0xEF, 0x00],
-        [0x41, 0x00],
-        [0x42, 0x00]
+        [0xEF, 0x00], [0x32, 0x29], [0x33, 0x01], [0x34, 0x00], [0x35, 0x01],
+        [0x36, 0x00], [0x37, 0x07], [0x38, 0x17], [0x39, 0x06], [0x3A, 0x12],
+        [0x3F, 0x00], [0x40, 0x02], [0x41, 0xFF], [0x42, 0x01], [0x46, 0x2D],
+        [0x47, 0x0F], [0x48, 0x3C], [0x49, 0x00], [0x4A, 0x1E], [0x4C, 0x20],
+        [0x51, 0x10], [0x5E, 0x10], [0x60, 0x27], [0x80, 0x42], [0x81, 0x44],
+        [0x82, 0x04], [0x8B, 0x01], [0x90, 0x06], [0x95, 0x0A], [0x96, 0x0C],
+        [0x97, 0x05], [0x9A, 0x14], [0x9C, 0x3F], [0xA5, 0x19], [0xCC, 0x19],
+        [0xCD, 0x0B], [0xCE, 0x13], [0xCF, 0x64], [0xD0, 0x21], [0xEF, 0x00],
+        [0x41, 0x00], [0x42, 0x00]
     ]
 
     //% block="initialisiere Gestensensor"
@@ -31,13 +32,11 @@ namespace gestureSensor {
         pins.i2cWriteNumber(GES_ADDR, 0x0000, NumberFormat.UInt16BE)
         basic.pause(10)
 
-        // Initialisierungsregister schreiben
         for (let pair of INIT_REGISTERS) {
             pins.i2cWriteBuffer(GES_ADDR, pins.createBufferFromArray([pair[0], pair[1]]))
             basic.pause(1)
         }
 
-        // Aktivieren des Gesten-Engine
         pins.i2cWriteBuffer(GES_ADDR, pins.createBufferFromArray([0xEF, 0x00]))
         pins.i2cWriteBuffer(GES_ADDR, pins.createBufferFromArray([0x72, 0x01])) // Enable gesture detection
         basic.pause(10)
@@ -48,14 +47,21 @@ namespace gestureSensor {
     //% block.tooltip="Liest die aktuell erkannte Geste als Zahl."
     export function erkannteGeste(): number {
         pins.i2cWriteNumber(GES_ADDR, GES_REG, NumberFormat.UInt8BE)
-        let g = pins.i2cReadNumber(GES_ADDR, NumberFormat.UInt8LE)
-        if (g != lastGesture) {
+        let g1 = pins.i2cReadNumber(GES_ADDR, NumberFormat.UInt8LE)
+
+        pins.i2cWriteNumber(GES_ADDR, GES_REG2, NumberFormat.UInt8BE)
+        let g2 = pins.i2cReadNumber(GES_ADDR, NumberFormat.UInt8LE)
+
+        let gesture = g1 != 0 ? g1 : (g2 == 0x01 ? 0x100 : 0)
+
+        if (gesture != lastGesture) {
             gestureChanged = true
-            lastGesture = g
+            lastGesture = gesture
         } else {
             gestureChanged = false
         }
-        return g
+
+        return gesture
     }
 
     //% block="wenn Geste %g erkannt wurde"
@@ -85,6 +91,7 @@ namespace gestureSensor {
             case 0x20: return "nach hinten"
             case 0x40: return "Uhrzeigersinn"
             case 0x80: return "gegen den Uhrzeigersinn"
+            case 0x100: return "winken"
             case 0x00: return "Keine"
             default: return "Unbekannt"
         }
@@ -143,6 +150,8 @@ namespace gestureSensor {
         //% block="im Uhrzeigersinn"
         Clockwise = 0x40,
         //% block="gegen den Uhrzeigersinn"
-        CounterClockwise = 0x80
+        CounterClockwise = 0x80,
+        //% block="winken"
+        Wave = 0x100
     }
 }
