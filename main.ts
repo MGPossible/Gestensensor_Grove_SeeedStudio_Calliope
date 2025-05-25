@@ -25,7 +25,7 @@ namespace gestureSensor {
         [0x41, 0x00], [0x42, 0x00]
     ]
 
-    //% block="initialisiere Gestensensor"
+    //% block="initialisiere Gestensensor beim Start"
     //% group="Grundfunktionen"
     //% block.tooltip="Initialisiert den PAJ7620U2 Gestensensor für die Verwendung."
     export function init(): void {
