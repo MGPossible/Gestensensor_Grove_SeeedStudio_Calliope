@@ -13,27 +13,49 @@ namespace gestureSensor {
     const GES_ADDR = 0x73;
     const GES_REG = 0x43;
 
+    // Registrierungsdaten laut PAJ7620U2-Datenblatt (verkürzt)
+    const INIT_REGISTERS: [number, number][] = [
+        [0xEF, 0x00],
+        [0x32, 0x29],
+        [0x33, 0x01],
+        [0x34, 0x00],
+        [0xEF, 0x00],
+        [0x41, 0x00],
+        [0x42, 0x00]
+    ]
+
     //% block="initialisiere Gestensensor"
     //% group="Grundfunktionen"
     //% block.tooltip="Initialisiert den PAJ7620U2 Gestensensor für die Verwendung."
     export function init(): void {
-        pins.i2cWriteNumber(GES_ADDR, 0xEF01, NumberFormat.UInt16BE);
-        basic.pause(10);
-        // (vereinfachte Initialisierung für PAJ7620U2)
+        pins.i2cWriteNumber(GES_ADDR, 0x0000, NumberFormat.UInt16BE)
+        basic.pause(10)
+
+        // Initialisierungsregister schreiben
+        for (let pair of INIT_REGISTERS) {
+            pins.i2cWriteBuffer(GES_ADDR, pins.createBufferFromArray([pair[0], pair[1]]))
+            basic.pause(1)
+        }
+
+        // Aktivieren des Gesten-Engine
+        pins.i2cWriteBuffer(GES_ADDR, pins.createBufferFromArray([0xEF, 0x00]))
+        pins.i2cWriteBuffer(GES_ADDR, pins.createBufferFromArray([0x72, 0x01])) // Enable gesture detection
+        basic.pause(10)
     }
 
     //% block="erkannte Geste (als Zahl)"
     //% group="Grundfunktionen"
     //% block.tooltip="Liest die aktuell erkannte Geste als Zahl."
     export function erkannteGeste(): number {
-        let g = pins.i2cReadNumber(GES_ADDR, NumberFormat.UInt8LE);
+        pins.i2cWriteNumber(GES_ADDR, GES_REG, NumberFormat.UInt8BE)
+        let g = pins.i2cReadNumber(GES_ADDR, NumberFormat.UInt8LE)
         if (g != lastGesture) {
-            gestureChanged = true;
-            lastGesture = g;
+            gestureChanged = true
+            lastGesture = g
         } else {
-            gestureChanged = false;
+            gestureChanged = false
         }
-        return g;
+        return g
     }
 
     //% block="wenn Geste %g erkannt wurde"
@@ -43,11 +65,11 @@ namespace gestureSensor {
         control.inBackground(() => {
             while (true) {
                 if (erkannteGeste() == g) {
-                    handler();
+                    handler()
                 }
-                basic.pause(100);
+                basic.pause(100)
             }
-        });
+        })
     }
 
     //% block="Name der letzten Geste"
@@ -55,16 +77,16 @@ namespace gestureSensor {
     //% block.tooltip="Gibt den Namen der zuletzt erkannten Geste als Text zurück."
     export function nameDerGeste(): string {
         switch (lastGesture) {
-            case 0x01: return "rechts";
-            case 0x02: return "links";
-            case 0x04: return "hoch";
-            case 0x08: return "runter";
-            case 0x10: return "nach vorne";
-            case 0x20: return "nach hinten";
-            case 0x40: return "Uhrzeigersinn";
-            case 0x80: return "gegen den Uhrzeigersinn";
-            case 0x00: return "Keine";
-            default: return "Unbekannt";
+            case 0x01: return "rechts"
+            case 0x02: return "links"
+            case 0x04: return "hoch"
+            case 0x08: return "runter"
+            case 0x10: return "nach vorne"
+            case 0x20: return "nach hinten"
+            case 0x40: return "Uhrzeigersinn"
+            case 0x80: return "gegen den Uhrzeigersinn"
+            case 0x00: return "Keine"
+            default: return "Unbekannt"
         }
     }
 
@@ -72,22 +94,22 @@ namespace gestureSensor {
     //% group="Erweiterungen"
     //% block.tooltip="Wartet für eine bestimmte Zeit auf eine Geste und gibt deren Nummer zurück."
     export function warteAufGeste(timeout: number): number {
-        let start = control.millis();
-        let g = 0;
+        let start = control.millis()
+        let g = 0
         while (control.millis() - start < timeout) {
-            g = erkannteGeste();
-            if (g != 0) break;
-            basic.pause(50);
+            g = erkannteGeste()
+            if (g != 0) break
+            basic.pause(50)
         }
-        return g;
+        return g
     }
 
     //% block="neue Geste erkannt?"
     //% group="Erweiterungen"
     //% block.tooltip="Gibt 'true' zurück, wenn sich die Geste seit der letzten Messung geändert hat."
     export function neueGesteErkannt(): boolean {
-        erkannteGeste();
-        return gestureChanged;
+        erkannteGeste()
+        return gestureChanged
     }
 
     //% block="Pause bis eine beliebige Geste erkannt wurde"
@@ -95,7 +117,7 @@ namespace gestureSensor {
     //% block.tooltip="Hält das Programm an, bis eine Geste erkannt wurde."
     export function warteAufBeliebigeGeste(): void {
         while (erkannteGeste() == 0) {
-            basic.pause(50);
+            basic.pause(50)
         }
     }
 
