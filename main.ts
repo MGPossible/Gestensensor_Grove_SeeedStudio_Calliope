@@ -12,7 +12,7 @@ namespace gestureSensor {
     const GES_REG = 0x43
     const GES_REG2 = 0x44
 
-    // Vollständige Initialisierungsdaten (gekürzt darstellbar, aber vollständig verwenden!)
+    // Vollständige Initialisierungsdaten
     const INIT_REGISTERS: [number, number][] = [
         [0xEF, 0x00], [0x32, 0x29], [0x33, 0x01], [0x34, 0x00], [0x35, 0x01],
         [0x36, 0x00], [0x37, 0x07], [0x38, 0x17], [0x39, 0x06], [0x3A, 0x12],
@@ -25,106 +25,213 @@ namespace gestureSensor {
         [0x41, 0x00], [0x42, 0x00]
     ]
 
-    //% block="initialisiere Gestensensor beim Start"
+    /**
+     * Initialisiert den Gestensensor.
+     */
+    //% block="Initialisiere Gestensensor an Port A0"
     //% group="Grundfunktionen"
-    //% block.tooltip="Initialisiert den PAJ7620U2 Gestensensor für die Verwendung."
+    //% block.tooltip="Initialisiert den PAJ7620U2 Gestensensor."
     export function init(): void {
+
         pins.i2cWriteNumber(GES_ADDR, 0x0000, NumberFormat.UInt16BE)
+
         basic.pause(10)
 
         for (let pair of INIT_REGISTERS) {
-            pins.i2cWriteBuffer(GES_ADDR, pins.createBufferFromArray([pair[0], pair[1]]))
+
+            pins.i2cWriteBuffer(
+                GES_ADDR,
+                pins.createBufferFromArray([pair[0], pair[1]])
+            )
+
             basic.pause(1)
         }
 
-        pins.i2cWriteBuffer(GES_ADDR, pins.createBufferFromArray([0xEF, 0x00]))
-        pins.i2cWriteBuffer(GES_ADDR, pins.createBufferFromArray([0x72, 0x01])) // Enable gesture detection
+        pins.i2cWriteBuffer(
+            GES_ADDR,
+            pins.createBufferFromArray([0xEF, 0x00])
+        )
+
+        pins.i2cWriteBuffer(
+            GES_ADDR,
+            pins.createBufferFromArray([0x72, 0x01])
+        )
+
         basic.pause(10)
     }
 
-    //% block="erkannte Geste (als Zahl)"
-    //% group="Grundfunktionen"
-    //% block.tooltip="Liest die aktuell erkannte Geste als Zahl."
-    export function erkannteGeste(): number {
+    /**
+     * Liest die aktuell erkannte Geste.
+     */
+    function leseGeste(): number {
+
         pins.i2cWriteNumber(GES_ADDR, GES_REG, NumberFormat.UInt8BE)
+
         let g1 = pins.i2cReadNumber(GES_ADDR, NumberFormat.UInt8LE)
 
         pins.i2cWriteNumber(GES_ADDR, GES_REG2, NumberFormat.UInt8BE)
+
         let g2 = pins.i2cReadNumber(GES_ADDR, NumberFormat.UInt8LE)
 
         let gesture = g1 != 0 ? g1 : (g2 == 0x01 ? 0x100 : 0)
 
         if (gesture != lastGesture) {
+
             gestureChanged = true
             lastGesture = gesture
+
         } else {
+
             gestureChanged = false
         }
 
         return gesture
     }
 
+    /**
+     * Erkannte Geste als Zahlwert.
+     */
+    //% block="erkannte Geste als Zahlwert"
+    //% group="Grundfunktionen"
+    //% block.tooltip="Gibt die erkannte Geste als Zahl zurück."
+    export function erkannteGesteAlsZahl(): number {
+
+        return leseGeste()
+    }
+
+    /**
+     * Erkannte Geste als Name.
+     */
+    //% block="erkannte Geste als Name"
+    //% group="Grundfunktionen"
+    //% block.tooltip="Gibt die erkannte Geste als Text zurück."
+    export function erkannteGesteAlsName(): string {
+
+        leseGeste()
+
+        return nameVonGeste(lastGesture)
+    }
+
+    /**
+     * Wenn bestimmte Geste erkannt wurde.
+     */
     //% block="wenn Geste %g erkannt wurde"
     //% group="Grundfunktionen"
-    //% blockTooltip="Führt den Code aus, wenn eine bestimmte Geste erkannt wird."
+    //% block.tooltip="Führt den Code aus wenn die gewählte Geste erkannt wurde."
     export function onGesture(g: GestureType, handler: () => void): void {
+
         control.inBackground(() => {
+
             while (true) {
-                if (erkannteGeste() == g) {
+
+                if (leseGeste() == g) {
+
                     handler()
                 }
+
                 basic.pause(100)
             }
         })
     }
 
-    //% block="Name der letzten Geste"
+    /**
+     * Pause bis beliebige Geste erkannt wurde.
+     */
+    //% block="Pause bis beliebige Geste erkannt wurde"
     //% group="Erweiterungen"
-    //% block.tooltip="Gibt den Namen der zuletzt erkannten Geste als Text zurück."
-    export function nameDerGeste(): string {
-        switch (lastGesture) {
+    //% block.tooltip="Wartet bis irgendeine Geste erkannt wurde."
+    export function warteAufBeliebigeGeste(): void {
+
+        while (leseGeste() == 0) {
+
+            basic.pause(50)
+        }
+    }
+
+    /**
+     * Pause bis bestimmte Geste erkannt wurde.
+     */
+    //% block="Pause bis Geste %g erkannt wurde"
+    //% group="Erweiterungen"
+    //% block.tooltip="Wartet bis die gewählte Geste erkannt wurde."
+    export function warteAufGeste(g: GestureType): void {
+
+        while (leseGeste() != g) {
+
+            basic.pause(50)
+        }
+    }
+
+    /**
+     * Neue Geste erkannt?
+     */
+    //% block="neue Geste erkannt?"
+    //% group="Erweiterungen"
+    //% block.tooltip="Gibt 'true' zurück wenn eine neue Geste erkannt wurde."
+    export function neueGesteErkannt(): boolean {
+
+        leseGeste()
+
+        return gestureChanged
+    }
+
+    /**
+     * Geste erkennen innerhalb von X ms.
+     */
+    //% block="Geste erkennen innerhalb von %timeout ms"
+    //% group="Erweiterungen"
+    //% block.tooltip="Wartet eine bestimmte Zeit auf eine Geste."
+    export function erkenneGesteInnerhalb(timeout: number): number {
+
+        let start = control.millis()
+
+        let g = 0
+
+        while (control.millis() - start < timeout) {
+
+            g = leseGeste()
+
+            if (g != 0) {
+
+                break
+            }
+
+            basic.pause(50)
+        }
+
+        return g
+    }
+
+    /**
+     * Name der letzten erkannten Geste.
+     */
+    //% block="Name der letzten erkannten Geste"
+    //% group="Erweiterungen"
+    //% block.tooltip="Gibt den Namen der letzten erkannten Geste zurück."
+    export function letzteGesteName(): string {
+
+        return nameVonGeste(lastGesture)
+    }
+
+    /**
+     * Wandelt Gestenwert in Namen um.
+     */
+    function nameVonGeste(g: number): string {
+
+        switch (g) {
+
             case 0x01: return "rechts"
             case 0x02: return "links"
             case 0x04: return "hoch"
             case 0x08: return "runter"
-            case 0x10: return "nach vorne"
-            case 0x20: return "nach hinten"
-            case 0x40: return "Uhrzeigersinn"
-            case 0x80: return "gegen den Uhrzeigersinn"
+            case 0x10: return "vorwärts"
+            case 0x20: return "rückwärts"
+            case 0x40: return "im Uhrzeigersinn"
+            case 0x80: return "gegen Uhrzeigersinn"
             case 0x100: return "winken"
-            case 0x00: return "Keine"
-            default: return "Unbekannt"
-        }
-    }
+            case 0x00: return "keine"
 
-    //% block="Geste erkennen innerhalb von %timeout ms"
-    //% group="Erweiterungen"
-    //% block.tooltip="Wartet für eine bestimmte Zeit auf eine Geste und gibt deren Nummer zurück."
-    export function warteAufGeste(timeout: number): number {
-        let start = control.millis()
-        let g = 0
-        while (control.millis() - start < timeout) {
-            g = erkannteGeste()
-            if (g != 0) break
-            basic.pause(50)
-        }
-        return g
-    }
-
-    //% block="neue Geste erkannt?"
-    //% group="Erweiterungen"
-    //% block.tooltip="Gibt 'true' zurück, wenn sich die Geste seit der letzten Messung geändert hat."
-    export function neueGesteErkannt(): boolean {
-        erkannteGeste()
-        return gestureChanged
-    }
-
-    //% block="Pause bis eine beliebige Geste erkannt wurde"
-    //% group="Erweiterungen"
-    //% block.tooltip="Hält das Programm an, bis eine Geste erkannt wurde."
-    export function warteAufBeliebigeGeste(): void {
-        while (erkannteGeste() == 0) {
-            basic.pause(50)
+            default: return "unbekannt"
         }
     }
 
@@ -133,24 +240,34 @@ namespace gestureSensor {
      */
     //% blockId=gesture_enum block="Geste"
     export enum GestureType {
+
         //% block="keine"
         None = 0,
+
         //% block="rechts"
         Right = 0x01,
+
         //% block="links"
         Left = 0x02,
+
         //% block="hoch"
         Up = 0x04,
+
         //% block="runter"
         Down = 0x08,
+
         //% block="vorwärts"
         Forward = 0x10,
+
         //% block="rückwärts"
         Backward = 0x20,
+
         //% block="im Uhrzeigersinn"
         Clockwise = 0x40,
-        //% block="gegen den Uhrzeigersinn"
+
+        //% block="gegen Uhrzeigersinn"
         CounterClockwise = 0x80,
+
         //% block="winken"
         Wave = 0x100
     }
