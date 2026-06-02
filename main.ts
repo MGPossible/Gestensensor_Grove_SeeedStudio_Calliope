@@ -13,7 +13,7 @@ namespace gestureSensor {
     const GES_REG2 = 0x44
 
     // Vollständige Initialisierungsdaten
-    const INIT_REGISTERS: [number][] = [
+    const INIT_REGISTERS: number[] = [
         [0xEF, 0x00], [0x32, 0x29], [0x33, 0x01], [0x34, 0x00], [0x35, 0x01],
         [0x36, 0x00], [0x37, 0x07], [0x38, 0x17], [0x39, 0x06], [0x3A, 0x12],
         [0x3F, 0x00], [0x40, 0x02], [0x41, 0xFF], [0x42, 0x01], [0x46, 0x2D],
@@ -37,13 +37,16 @@ namespace gestureSensor {
 
         basic.pause(10)
 
-        for (let pair of INIT_REGISTERS) {
-
+        for (let i = 0; i < INIT_REGISTERS.length; i += 2) {
+        
             pins.i2cWriteBuffer(
                 GES_ADDR,
-                pins.createBufferFromArray([pair[0], pair[1]])
+                pins.createBufferFromArray([
+                    INIT_REGISTERS[i],
+                    INIT_REGISTERS[i + 1]
+                ])
             )
-
+        
             basic.pause(1)
         }
 
@@ -118,22 +121,37 @@ namespace gestureSensor {
     //% block="wenn Geste %g erkannt wurde"
     //% group="Grundfunktionen"
     //% block.tooltip="Führt den Code aus wenn die gewählte Geste erkannt wurde."
-    export function onGesture(g: GestureType, handler: () => void): void {
-
+    export function onGesture(
+        g: GestureType,
+        handler: () => void
+    ) {
+    
+        control.onEvent(
+            gestureEventId,
+            g,
+            handler
+        )
+    
         control.inBackground(() => {
-
+    
             while (true) {
-
-                if (leseGeste() == g) {
-
-                    handler()
+    
+                let aktuelle = leseGeste()
+    
+                if (aktuelle != lastGesture) {
+    
+                    lastGesture = aktuelle
+    
+                    control.raiseEvent(
+                        gestureEventId,
+                        aktuelle
+                    )
                 }
-
-                basic.pause(100)
+    
+                basic.pause(50)
             }
         })
     }
-
     /**
      * Pause bis beliebige Geste erkannt wurde.
      */
