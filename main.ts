@@ -1,3 +1,8 @@
+/**
+ * Grove Gesture Sensor Erweiterung (PAJ7620U2)
+ */
+//% color=#8f3fd1 icon="\uf20e" block="Gestensensor MG"
+//% groups=['Grundfunktionen', 'Erweiterungen']
 namespace gestureSensor {
 
     let lastGesture = 0
