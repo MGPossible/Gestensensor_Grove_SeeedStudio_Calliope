@@ -129,11 +129,11 @@ namespace gesten {
     }
 
     /**
-     * Initialisiert den Gestensensor.
+     * Startet den Gestensensor an A0 und bereitet ihn für die Verwendung vor..
      */
     //% group="Grundfunktionen"
     //% block="Gestensensor an A0 initialisieren"
-    //% block.tooltip="Startet den Gestensensor und bereitet ihn für die Verwendung vor."
+    //% block.tooltip="Startet den Gestensensor an A0 und bereitet ihn für die Verwendung vor."
     export function initialisieren(): void {
         basic.pause(100)
         
@@ -151,11 +151,11 @@ namespace gesten {
     }
 
     /**
-     * Liest die aktuelle Geste aus.
+     * Liest die aktuelle Geste vom Sensor (0=Keine, 1=Rechts, 2=Links, 3=Oben, 4=Unten, 5=Vorwärts (hin zum Sensor), 6=Rückwärts (weg vom Sensor), 7=Uhr (ungenau) , 8=Gegen Uhr (Ungenau), 9=Winken (ungenau)).
      */
     //% group="Grundfunktionen"
     //% block="Geste erkennen"
-    //% block.tooltip="Liest die aktuelle Geste vom Sensor (0=Keine, 1=Rechts, 2=Links, 3=Oben, 4=Unten, 5=Vorwärts (zum Sensor hin), 6=Rückwärts (vom Sensor weg), 7=Uhr (ungenau), 8=Gegen Uhr (ungenau), 9=Winken (ungenau))"
+    //% block.tooltip="Liest die aktuelle Geste vom Sensor (0=Keine, 1=Rechts, 2=Links, 3=Oben, 4=Unten, 5=Vorwärts (hin zum Sensor), 6=Rückwärts (weg vom Sensor), 7=Uhr (ungenau) , 8=Gegen Uhr (Ungenau), 9=Winken (ungenau))."
     export function gestureLesen(): number {
         if (!sensorInitialisiert) {
             return 0
@@ -210,17 +210,17 @@ namespace gesten {
     }
 
     /**
-     * Prüft ob eine bestimmte Geste erkannt wurde.
+     * Gibt "WAHR" zurück wenn die angegebene Geste erkannt wurde.
      */
     //% group="Grundfunktionen"
     //% block="Ist Geste $geste erkannt"
-    //% block.tooltip="Gibt true zurück wenn die angegebene Geste erkannt wurde."
+    //% block.tooltip="Gibt "WAHR" zurück wenn die angegebene Geste erkannt wurde."
     export function istGeste(geste: number): boolean {
         return gestureLesen() === geste
     }
 
     /**
-     * Wartet bis eine bestimmte Geste erkannt wird.
+     * Hält das Programm an bis die angegebene Geste erkannt wird.
      */
     //% group="Grundfunktionen"
     //% block="Warte auf Geste $geste"
@@ -232,7 +232,33 @@ namespace gesten {
     }
 
     /**
-     * Gibt die letzte erkannte Geste zurück.
+     * Führt den folgenden Code aus wenn die angegebene Geste erkannt wird.
+     */
+    //% group="Grundfunktionen"
+    //% block="Wenn Geste $geste erkannt"
+    //% block.tooltip="Führt den folgenden Code aus wenn die angegebene Geste erkannt wird."
+    export function onGesture(geste: GroveGesture, handler: () => void): void {
+        control.inBackground(() => {
+            let lastDetected = 0
+            
+            while (true) {
+                let aktuelleGeste = gestureLesen()
+                
+                if (aktuelleGeste === geste && lastDetected !== geste) {
+                    lastDetected = geste
+                    handler()
+                    basic.pause(500)  // Debounce - verhindert zu häufige Auslösung ggf. erhöhen!
+                } else if (aktuelleGeste !== geste) {
+                    lastDetected = 0
+                }
+                
+                basic.pause(100)
+            }
+        })
+    }
+
+    /**
+     * Gibt die zuletzt erkannte Geste zurück ohne neu zu messen.
      */
     //% group="Erweiterungen"
     //% block="Letzte Geste"
@@ -242,13 +268,28 @@ namespace gesten {
     }
 
     /**
-     * Gibt den Status des Sensors zurück.
+     * Gibt "WAHR" zurück wenn der Sensor korrekt initialisiert wurde.
      */
     //% group="Erweiterungen"
     //% block="Sensor initialisiert?"
-    //% block.tooltip="Gibt true zurück wenn der Sensor korrekt initialisiert wurde."
+    //% block.tooltip="Gibt "WAHR" zurück wenn der Sensor korrekt initialisiert wurde."
     export function istInitialisiert(): boolean {
         return sensorInitialisiert
+    }
+
+    /**
+     * Auswahlfeld für Gesten
+     */
+    //% group="Erweiterungen"
+    //% block="$geste"
+    //% blockId="gesture_picker"
+    //% geste.fieldEditor="gridpicker"
+    //% geste.fieldOptions.columns=3
+    //% geste.fieldOptions.tooltips=false
+    //% geste.fieldOptions.width=200
+    //% geste.defl=GroveGesture.Right
+    export function auswahlGeste(geste: GroveGesture): GroveGesture {
+        return geste
     }
 
     // Gesten-Konstanten für einfache Verwendung
