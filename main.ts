@@ -63,108 +63,52 @@ namespace gesten {
 
     const PAJ7620_ADDR = 0x73
     const PAJ7620_ID_ADDR = 0x00
-    const PAJ7620_REG_ADDR = 0x43
-    const PAJ7620_BANK_SELECT = 0xEF
+    const gestureEventId = 3100
 
-    let sensorInitialisiert = false
-    let letzteGeste = 0
-
-    function schreibeReg(addr: number, wert: number): void {
-        try {
+    // PAJ7620 Sensor-Klasse
+    class PAJ7620 {
+        private paj7620WriteReg(addr: number, cmd: number) {
             let buf = pins.createBuffer(2)
             buf[0] = addr
-            buf[1] = wert
+            buf[1] = cmd
             pins.i2cWriteBuffer(PAJ7620_ADDR, buf, false)
-            basic.pause(1)
-        } catch (e) {
-            sensorInitialisiert = false
         }
-    }
 
-    function leseReg(addr: number): number {
-        try {
+        private paj7620ReadReg(addr: number): number {
             let buf = pins.createBuffer(1)
             buf[0] = addr
             pins.i2cWriteBuffer(PAJ7620_ADDR, buf, false)
-            basic.pause(1)
             buf = pins.i2cReadBuffer(PAJ7620_ADDR, 1, false)
             return buf[0]
-        } catch (e) {
-            return 0
         }
-    }
 
-    function waehleBank(bank: number): void {
-        if (bank === 0) {
-            schreibeReg(PAJ7620_BANK_SELECT, 0x00)
-        } else if (bank === 1) {
-            schreibeReg(PAJ7620_BANK_SELECT, 0x01)
+        private paj7620SelectBank(bank: number) {
+            if (bank === 0) this.paj7620WriteReg(0xEF, 0)
+            else if (bank === 1) this.paj7620WriteReg(0xEF, 1)
         }
-        basic.pause(5)
-    }
 
-    function initialisiereSensor(): boolean {
-        try {
-            waehleBank(0)
-            basic.pause(10)
-
-            let id = leseReg(PAJ7620_ID_ADDR)
-            if (id !== 0x20) {
-                return false
+        private paj7620Init() {
+            let temp = 0
+            this.paj7620SelectBank(0)
+            temp = this.paj7620ReadReg(PAJ7620_ID_ADDR)
+            if (temp === 0x20) {
+                for (let i = 0; i < 438; i += 2) {
+                    this.paj7620WriteReg(initRegisterArray[i], initRegisterArray[i + 1])
+                }
             }
-
-            // Initialisiere alle Register
-            for (let i = 0; i < initRegisterArray.length; i += 2) {
-                schreibeReg(initRegisterArray[i], initRegisterArray[i + 1])
-                basic.pause(1)
-            }
-
-            waehleBank(0)
-            basic.pause(100)
-
-            return true
-        } catch (e) {
-            return false
+            this.paj7620SelectBank(0)
         }
-    }
 
-    /**
-     * Startet den Gestensensor an A0 und bereitet ihn für die Verwendung vor.
-     */
-    //% group="Grundfunktionen"
-    //% block="Gestensensor an A0 initialisieren"
-    //% block.tooltip="Startet den Gestensensor an A0 und bereitet ihn für die Verwendung vor."
-    export function initialisieren(): void {
-        basic.pause(100)
-        
-        if (initialisiereSensor()) {
-            sensorInitialisiert = true
+        init() {
+            this.paj7620Init()
             basic.pause(200)
-        } else {
-            sensorInitialisiert = false
-            basic.pause(500)
-            // Zweiter Versuch
-            if (initialisiereSensor()) {
-                sensorInitialisiert = true
-            }
-        }
-    }
-
-    /**
-     * Liest die aktuelle Geste vom Sensor (0=Keine, 1=Rechts, 2=Links, 3=Oben, 4=Unten, 5=Vorwärts, 6=Rückwärts, 7=Uhr, 8=Gegen Uhr, 9=Winken).
-     */
-    //% group="Grundfunktionen"
-    //% block="Geste erkennen (Zahlwert)"
-    //% block.tooltip="Liest die aktuelle Geste vom Sensor (0=Keine, 1=Rechts, 2=Links, 3=Oben, 4=Unten, 5=Vorwärts, 6=Rückwärts, 7=Uhr, 8=Gegen Uhr, 9=Winken)"
-    export function gestureLesen(): number {
-        if (!sensorInitialisiert) {
-            return 0
         }
 
-        try {
-            let data = leseReg(0x43)
+        read(): number {
+            let data = 0
             let result = 0
 
+            data = this.paj7620ReadReg(0x43)
             switch (data) {
                 case 0x01:
                     result = GroveGesture.Right
@@ -191,29 +135,78 @@ namespace gesten {
                     result = GroveGesture.Anticlockwise
                     break
                 default:
-                    data = leseReg(0x44)
+                    data = this.paj7620ReadReg(0x44)
                     if (data === 0x01) {
                         result = GroveGesture.Wave
                     }
                     break
             }
-
-            if (result > 0) {
-                letzteGeste = result
-            }
-
-            basic.pause(30)
             return result
-        } catch (e) {
+        }
+    }
+
+    // Globale Variablen
+    let paj7620 = new PAJ7620()
+    let sensorInitialisiert = false
+    let letzteGeste = 0
+    let triggeredGestures: boolean[] = [false, false, false, false, false, false, false, false, false, false]
+    let monitoringLaeuft = false
+
+    // Zentrale Überwachungsschleife (läuft nur EINMAL)
+    function startGestureMonitoring() {
+        if (monitoringLaeuft) return
+        
+        monitoringLaeuft = true
+        control.inBackground(() => {
+            while (true) {
+                if (sensorInitialisiert) {
+                    const aktuelleGeste = paj7620.read()
+                    
+                    // Nur wenn sich Geste ändert
+                    if (aktuelleGeste !== letzteGeste) {
+                        letzteGeste = aktuelleGeste
+                        control.raiseEvent(gestureEventId, aktuelleGeste)
+                    }
+                }
+                basic.pause(50)
+            }
+        })
+    }
+
+    /**
+     * Startet den Gestensensor an A0 und bereitet ihn für die Verwendung vor.
+     */
+    //% group="Grundfunktionen"
+    //% block="Gestensensor an A0 initialisieren"
+    //% block.tooltip="Startet den Gestensensor an A0 und bereitet ihn für die Verwendung vor."
+    export function initialisieren(): void {
+        basic.pause(100)
+        paj7620.init()
+        sensorInitialisiert = true
+        basic.pause(200)
+        
+        // Starte zentrale Überwachung
+        startGestureMonitoring()
+    }
+
+    /**
+     * Liest die aktuelle Geste vom Sensor (0=Keine, 1=Rechts, 2=Links, 3=Oben, 4=Unten, 5=Vorwärts, 6=Rückwärts, 7=Uhr, 8=Gegen Uhr, 9=Winken).
+     */
+    //% group="Grundfunktionen"
+    //% block="Geste erkennen (Zahlwert)"
+    //% block.tooltip="Liest die aktuelle Geste vom Sensor (0=Keine, 1=Rechts, 2=Links, 3=Oben, 4=Unten, 5=Vorwärts, 6=Rückwärts, 7=Uhr, 8=Gegen Uhr, 9=Winken)"
+    export function gestureLesen(): number {
+        if (!sensorInitialisiert) {
             return 0
         }
+        return paj7620.read()
     }
 
     /**
      * Gibt "WAHR" zurück wenn die angegebene Geste erkannt wurde.
      */
     //% group="Grundfunktionen"
-    //% block="Geste $geste erkannt"
+    //% block="ist Geste $geste erkannt"
     //% block.tooltip="Gibt "WAHR" zurück wenn die angegebene Geste erkannt wurde."
     //% geste.defl=GroveGesture.Right
     export function istGeste(geste: GroveGesture): boolean {
@@ -221,7 +214,7 @@ namespace gesten {
     }
 
     /**
-     * Hält das Programm an bis die angegebene Geste erkannt wird.
+     * Hält das Programm an bis die angegebene Geste erkannt wird..
      */
     //% group="Erweiterungen"
     //% block="Warte auf Geste $geste"
@@ -229,57 +222,26 @@ namespace gesten {
     //% geste.defl=GroveGesture.Right
     export function wartAufGeste(geste: GroveGesture): void {
         while (gestureLesen() !== geste) {
-            basic.pause(100)
+            basic.pause(5)
         }
     }
 
     /**
-     * Führt den folgenden Code dauerhaft aus wenn die angegebene Geste erkannt wird.
-     */
-    //% group="Erweiterungen"
-    //% block="Starte dauerhaft, wenn Geste $geste erkannt"
-    //% block.tooltip="Führt den folgenden Code dauerhaft aus wenn die angegebene Geste erkannt wird."
-    export function onGesture(geste: GroveGesture, handler: () => void): void {
-        control.inBackground(() => {
-            let lastDetected = 0
-            
-            while (true) {
-                let aktuelleGeste = gestureLesen()
-                
-                if (aktuelleGeste === geste && lastDetected !== geste) {
-                    lastDetected = geste
-                    handler()
-                    basic.pause(500)  // Debounce - verhindert zu häufige Auslösung
-                } else if (aktuelleGeste !== geste) {
-                    lastDetected = 0
-                }
-                
-                basic.pause(100)
-            }
-        })
-    }
-    
-    /**
-     * Führt den folgenden Code einmalig aus wenn die angegebene Geste erkannt wird.
+     * Event-Handler für Gestenerkennung (EINMALIG)
      */
     //% group="Grundfunktionen"
     //% block="Starte einmalig, wenn Geste $geste erkannt"
-    //% block.tooltip="Führt den folgenden Code einmalig aus wenn die angegebene Geste erkannt wird."
+    //% block.tooltip="Triggert den Code einmalig wenn die Geste erkannt wird."
     export function onGestureOnce(geste: GroveGesture, handler: () => void): void {
-        control.inBackground(() => {
-            let gefunden = false
-            
-            while (!gefunden) {
-                let aktuelleGeste = gestureLesen()
-                
-                if (aktuelleGeste === geste) {
-                    handler()
-                    gefunden = true  // Schleife stoppt nach dem ersten Trigger
-                }
-                
-                basic.pause(100)
+        control.onEvent(gestureEventId, geste, function () {
+            if (!triggeredGestures[geste]) {
+                triggeredGestures[geste] = true
+                handler()
             }
         })
+        if (!monitoringLaeuft) {
+            startGestureMonitoring()
+        }
     }
 
     /**
@@ -293,7 +255,30 @@ namespace gesten {
     }
 
     /**
-     * Gibt "WAHR" zurück wenn der Sensor korrekt initialisiert wurde..
+     * Setzt den Trigger einer bestimmten Geste zurück, sodass sie wieder ausgelöst werden kann.
+     */
+    //% group="Erweiterungen"
+    //% block="Reset Trigger für Geste $geste"
+    //% block.tooltip="Setzt den Trigger einer bestimmten Geste zurück, sodass sie wieder ausgelöst werden kann."
+    //% geste.defl=GroveGesture.Right
+    export function resetGestureTrigger(geste: GroveGesture): void {
+        triggeredGestures[geste] = false
+    }
+
+    /**
+     * Setzt den Trigger aller Gesten zurück, sodass sie wieder ausgelöst werden können.
+     */
+    //% group="Erweiterungen"
+    //% block="Reset alle Gesten-Trigger"
+    //% block.tooltip="Setzt den Trigger aller Gesten zurück, sodass sie wieder ausgelöst werden können"
+    export function resetAllGestureTriggers(): void {
+        for (let i = 0; i < triggeredGestures.length; i++) {
+            triggeredGestures[i] = false
+        }
+    }
+
+    /**
+     * Gibt "WAHR" zurück wenn der Sensor korrekt initialisiert wurde.
      */
     //% group="Erweiterungen"
     //% block="Sensor initialisiert?"
@@ -303,7 +288,7 @@ namespace gesten {
     }
 
     /**
-     * Auswahlfeld für Gesten
+     * Auswahlfeld für Gesten (runder Block)
      */
     //% group="Erweiterungen"
     //% block="$geste"
