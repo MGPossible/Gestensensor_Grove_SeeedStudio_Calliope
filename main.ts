@@ -259,7 +259,7 @@ namespace gesten {
      * Setzt den Trigger einer bestimmten Geste zurück, sodass sie wieder ausgelöst werden kann.
      */
     //% group="Erweiterungen"
-    //% block="Reset Trigger für Geste $geste"
+    //% block="Setze den Trigger für die Geste $geste zurück"
     //% block.tooltip="Setzt den Trigger einer bestimmten Geste zurück, sodass sie wieder ausgelöst werden kann."
     //% geste.defl=GroveGesture.Right
     export function resetGestureTrigger(geste: GroveGesture): void {
@@ -270,7 +270,7 @@ namespace gesten {
      * Setzt den Trigger aller Gesten zurück, sodass sie wieder ausgelöst werden können.
      */
     //% group="Erweiterungen"
-    //% block="Reset alle Gesten-Trigger"
+    //% block="Setze alle den Trigger für alle Gesten zurück"
     //% block.tooltip="Setzt den Trigger aller Gesten zurück, sodass sie wieder ausgelöst werden können"
     export function resetAllGestureTriggers(): void {
         for (let i = 0; i < triggeredGestures.length; i++) {
