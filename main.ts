@@ -214,7 +214,7 @@ namespace gesten {
     }
 
     /**
-     * Hält das Programm an bis die angegebene Geste erkannt wird..
+     * Hält das Programm an bis die angegebene Geste erkannt wird.
      */
     //% group="Erweiterungen"
     //% block="Warte auf Geste $geste"
@@ -227,11 +227,11 @@ namespace gesten {
     }
 
     /**
-     * Triggert den Code einmalig wenn die Geste erkannt wird.
+     * Startet den Code einmalig wenn die Geste erkannt wird und deaktiviert die Geste.
      */
     //% group="Grundfunktionen"
     //% block="Starte einmalig, wenn Geste $geste erkannt"
-    //% block.tooltip="Triggert den Code einmalig wenn die Geste erkannt wird."
+    //% block.tooltip="Startet den Code einmalig wenn die Geste erkannt wird und deaktiviert die Geste."
     //% geste.defl=GroveGesture.Right
     export function onGestureOnce(geste: GroveGesture, handler: () => void): void {
         control.onEvent(gestureEventId, geste, function () {
@@ -256,22 +256,22 @@ namespace gesten {
     }
 
     /**
-     * Setzt den Trigger einer bestimmten Geste zurück, sodass sie wieder ausgelöst werden kann.
+     * Reaktiviert eine bestimmten Geste, sodass sie wieder ausgelöst werden kann.
      */
     //% group="Erweiterungen"
-    //% block="Setze den Trigger für die Geste $geste zurück"
-    //% block.tooltip="Setzt den Trigger einer bestimmten Geste zurück, sodass sie wieder ausgelöst werden kann."
+    //% block="Reaktiviere die Geste $geste"
+    //% block.tooltip="Reaktiviert eine bestimmten Geste, sodass sie wieder ausgelöst werden kann"
     //% geste.defl=GroveGesture.Right
     export function resetGestureTrigger(geste: GroveGesture): void {
         triggeredGestures[geste] = false
     }
 
     /**
-     * Setzt den Trigger aller Gesten zurück, sodass sie wieder ausgelöst werden können.
+     * Reaktiviere alle Gesten, sodass sie wieder ausgelöst werden können.
      */
     //% group="Erweiterungen"
-    //% block="Setze alle den Trigger für alle Gesten zurück"
-    //% block.tooltip="Setzt den Trigger aller Gesten zurück, sodass sie wieder ausgelöst werden können"
+    //% block="Reaktiviere alle Gesten"
+    //% block.tooltip="Reaktiviere alle Gesten, sodass sie wieder ausgelöst werden können"
     export function resetAllGestureTriggers(): void {
         for (let i = 0; i < triggeredGestures.length; i++) {
             triggeredGestures[i] = false
@@ -282,7 +282,7 @@ namespace gesten {
      * Gibt "WAHR" zurück wenn der Sensor korrekt initialisiert wurde.
      */
     //% group="Erweiterungen"
-    //% block="Sensor initialisiert?"
+    //% block="Sensor erfolgreich initialisiert?"
     //% block.tooltip="Gibt "WAHR" zurück wenn der Sensor korrekt initialisiert wurde."
     export function istInitialisiert(): boolean {
         return sensorInitialisiert
