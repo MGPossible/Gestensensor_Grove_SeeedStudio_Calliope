@@ -32,25 +32,25 @@ const initRegisterArray: number[] = [
 ]
 
 enum GroveGesture {
-    //% block="Keine"
+    //% block="0 - Keine"
     None = 0,
-    //% block="Rechts"
+    //% block="1 - Rechts"
     Right = 1,
-    //% block="Links"
+    //% block="2 - Links"
     Left = 2,
-    //% block="Oben"
+    //% block="3 - Oben"
     Up = 3,
-    //% block="Unten"
+    //% block="4 - Unten"
     Down = 4,
-    //% block="Vorwärts"
+    //% block="5 - Vorwärts"
     Forward = 5,
-    //% block="Rückwärts"
+    //% block="6 - Rückwärts"
     Backward = 6,
-    //% block="Uhr (Clockwise)"
+    //% block="7 - Uhr (Clockwise)"
     Clockwise = 7,
-    //% block="Gegen Uhr (Anticlockwise)"
+    //% block="8 - Gegen Uhr (Anticlockwise)"
     Anticlockwise = 8,
-    //% block="Winken"
+    //% block="9 - Winken"
     Wave = 9
 }
 
@@ -129,7 +129,7 @@ namespace gesten {
     }
 
     /**
-     * Startet den Gestensensor an A0 und bereitet ihn für die Verwendung vor..
+     * Startet den Gestensensor an A0 und bereitet ihn für die Verwendung vor.
      */
     //% group="Grundfunktionen"
     //% block="Gestensensor an A0 initialisieren"
@@ -151,11 +151,11 @@ namespace gesten {
     }
 
     /**
-     * Liest die aktuelle Geste vom Sensor (0=Keine, 1=Rechts, 2=Links, 3=Oben, 4=Unten, 5=Vorwärts (hin zum Sensor), 6=Rückwärts (weg vom Sensor), 7=Uhr (ungenau) , 8=Gegen Uhr (Ungenau), 9=Winken (ungenau)).
+     * Liest die aktuelle Geste vom Sensor (0=Keine, 1=Rechts, 2=Links, 3=Oben, 4=Unten, 5=Vorwärts, 6=Rückwärts, 7=Uhr, 8=Gegen Uhr, 9=Winken).
      */
     //% group="Grundfunktionen"
-    //% block="Geste erkennen"
-    //% block.tooltip="Liest die aktuelle Geste vom Sensor (0=Keine, 1=Rechts, 2=Links, 3=Oben, 4=Unten, 5=Vorwärts (hin zum Sensor), 6=Rückwärts (weg vom Sensor), 7=Uhr (ungenau) , 8=Gegen Uhr (Ungenau), 9=Winken (ungenau))."
+    //% block="Geste erkennen (Zahlwert)"
+    //% block.tooltip="Liest die aktuelle Geste vom Sensor (0=Keine, 1=Rechts, 2=Links, 3=Oben, 4=Unten, 5=Vorwärts, 6=Rückwärts, 7=Uhr, 8=Gegen Uhr, 9=Winken)"
     export function gestureLesen(): number {
         if (!sensorInitialisiert) {
             return 0
@@ -213,19 +213,21 @@ namespace gesten {
      * Gibt "WAHR" zurück wenn die angegebene Geste erkannt wurde.
      */
     //% group="Grundfunktionen"
-    //% block="Ist Geste $geste erkannt"
+    //% block="Geste $geste erkannt"
     //% block.tooltip="Gibt "WAHR" zurück wenn die angegebene Geste erkannt wurde."
-    export function istGeste(geste: number): boolean {
+    //% geste.defl=GroveGesture.Right
+    export function istGeste(geste: GroveGesture): boolean {
         return gestureLesen() === geste
     }
 
     /**
      * Hält das Programm an bis die angegebene Geste erkannt wird.
      */
-    //% group="Grundfunktionen"
+    //% group="Erweiterungen"
     //% block="Warte auf Geste $geste"
     //% block.tooltip="Hält das Programm an bis die angegebene Geste erkannt wird."
-    export function wartAufGeste(geste: number): void {
+    //% geste.defl=GroveGesture.Right
+    export function wartAufGeste(geste: GroveGesture): void {
         while (gestureLesen() !== geste) {
             basic.pause(100)
         }
@@ -235,7 +237,7 @@ namespace gesten {
      * Führt den folgenden Code aus wenn die angegebene Geste erkannt wird.
      */
     //% group="Grundfunktionen"
-    //% block="Wenn Geste $geste erkannt"
+    //% block="Starte, wenn Geste $geste erkannt"
     //% block.tooltip="Führt den folgenden Code aus wenn die angegebene Geste erkannt wird."
     export function onGesture(geste: GroveGesture, handler: () => void): void {
         control.inBackground(() => {
@@ -247,7 +249,7 @@ namespace gesten {
                 if (aktuelleGeste === geste && lastDetected !== geste) {
                     lastDetected = geste
                     handler()
-                    basic.pause(500)  // Debounce - verhindert zu häufige Auslösung ggf. erhöhen!
+                    basic.pause(500)  // Debounce - verhindert zu häufige Auslösung
                 } else if (aktuelleGeste !== geste) {
                     lastDetected = 0
                 }
@@ -268,7 +270,7 @@ namespace gesten {
     }
 
     /**
-     * Gibt "WAHR" zurück wenn der Sensor korrekt initialisiert wurde.
+     * Gibt "WAHR" zurück wenn der Sensor korrekt initialisiert wurde..
      */
     //% group="Erweiterungen"
     //% block="Sensor initialisiert?"
@@ -291,35 +293,4 @@ namespace gesten {
     export function auswahlGeste(geste: GroveGesture): GroveGesture {
         return geste
     }
-
-    // Gesten-Konstanten für einfache Verwendung
-    //% block="Keine"
-    export const KEINE = GroveGesture.None
-
-    //% block="Rechts"
-    export const RECHTS = GroveGesture.Right
-
-    //% block="Links"
-    export const LINKS = GroveGesture.Left
-
-    //% block="Oben"
-    export const OBEN = GroveGesture.Up
-
-    //% block="Unten"
-    export const UNTEN = GroveGesture.Down
-
-    //% block="Vorwärts"
-    export const VORWAERTS = GroveGesture.Forward
-
-    //% block="Rückwärts"
-    export const RUECKWAERTS = GroveGesture.Backward
-
-    //% block="Uhr (Clockwise)"
-    export const UHR = GroveGesture.Clockwise
-
-    //% block="Gegen Uhr (Anticlockwise)"
-    export const GEGEN_UHR = GroveGesture.Anticlockwise
-
-    //% block="Winken"
-    export const WINKEN = GroveGesture.Wave
 }
