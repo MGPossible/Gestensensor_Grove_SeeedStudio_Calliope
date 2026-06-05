@@ -227,11 +227,12 @@ namespace gesten {
     }
 
     /**
-     * Event-Handler für Gestenerkennung (EINMALIG)
+     * Triggert den Code einmalig wenn die Geste erkannt wird.
      */
     //% group="Grundfunktionen"
     //% block="Starte einmalig, wenn Geste $geste erkannt"
     //% block.tooltip="Triggert den Code einmalig wenn die Geste erkannt wird."
+    //% geste.defl=GroveGesture.Right
     export function onGestureOnce(geste: GroveGesture, handler: () => void): void {
         control.onEvent(gestureEventId, geste, function () {
             if (!triggeredGestures[geste]) {
