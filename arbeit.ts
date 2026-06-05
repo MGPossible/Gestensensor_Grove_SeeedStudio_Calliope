@@ -172,11 +172,11 @@ namespace grove {
     let paj7620 = new PAJ7620();
 
     /**
-     * init Grove Gesture modules
+     * Initialisiere Gestensensor an A0
      * 
      */
-    //% blockId=grove_initgesture block="init gesture"
-    //% group="Gesture"
+    //% blockId=grove_initgesture block="Initialisiere Gestensensor an A0"
+    //% group="Grundfunktion"
     export function initGesture() {
         if (!paj7620) {
             paj7620.init();
@@ -184,10 +184,10 @@ namespace grove {
     }
 
     /**
-     * get Grove Gesture model
+     * Erkenne Geste und gib den Zahlwert aus.
      * 
      */
-    //% blockId=grove_getgesture block="get gesture model"
+    //% blockId=grove_getgesture block="erkannte Geste (Zahlwert)"
     //% group="Gesture"
     export function getGestureModel(): number {
         return paj7620.read();
