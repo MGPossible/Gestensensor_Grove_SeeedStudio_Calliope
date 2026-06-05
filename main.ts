@@ -234,11 +234,11 @@ namespace gesten {
     }
 
     /**
-     * Führt den folgenden Code aus wenn die angegebene Geste erkannt wird.
+     * Führt den folgenden Code dauerhaft aus wenn die angegebene Geste erkannt wird.
      */
-    //% group="Grundfunktionen"
-    //% block="Starte, wenn Geste $geste erkannt"
-    //% block.tooltip="Führt den folgenden Code aus wenn die angegebene Geste erkannt wird."
+    //% group="Erweiterungen"
+    //% block="Starte dauerhaft, wenn Geste $geste erkannt"
+    //% block.tooltip="Führt den folgenden Code dauerhaft aus wenn die angegebene Geste erkannt wird."
     export function onGesture(geste: GroveGesture, handler: () => void): void {
         control.inBackground(() => {
             let lastDetected = 0
@@ -252,6 +252,29 @@ namespace gesten {
                     basic.pause(500)  // Debounce - verhindert zu häufige Auslösung
                 } else if (aktuelleGeste !== geste) {
                     lastDetected = 0
+                }
+                
+                basic.pause(100)
+            }
+        })
+    }
+    
+    /**
+     * Führt den folgenden Code einmalig aus wenn die angegebene Geste erkannt wird.
+     */
+    //% group="Grundfunktionen"
+    //% block="Starte einmalig, wenn Geste $geste erkannt"
+    //% block.tooltip="Führt den folgenden Code einmalig aus wenn die angegebene Geste erkannt wird."
+    export function onGestureOnce(geste: GroveGesture, handler: () => void): void {
+        control.inBackground(() => {
+            let gefunden = false
+            
+            while (!gefunden) {
+                let aktuelleGeste = gestureLesen()
+                
+                if (aktuelleGeste === geste) {
+                    handler()
+                    gefunden = true  // Schleife stoppt nach dem ersten Trigger
                 }
                 
                 basic.pause(100)
